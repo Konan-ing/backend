@@ -1,50 +1,40 @@
-// Vercel serverless function - /api/contact.js
-// POST { name, email, subject, message }
-// Requiert variables d'env : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, CONTACT_TO, SMTP_FROM
-
-const nodemailer = require('nodemailer');
-
+// api/contact.js — version debug
 module.exports = async (req, res) => {
-  // Autoriser les requêtes OPTIONS (CORS préflight) si nécessaire
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Remplace '*' par ton domaine en prod
+  // CORS pour tests (plus tard, on mettra ton domaine précis)
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
-
-  const { name, email, subject, message } = req.body || {};
-  if (!name || !email || !subject || !message) {
-    return res.status(400).json({ error: 'Champs manquants' });
-  }
-
-  if (!process.env.SMTP_HOST) {
-    return res.status(500).json({ error: 'SMTP non configuré côté serveur' });
-  }
-
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
+    // 1) affiche dans les logs ce qui arrive (utile pour Vercel logs)
+    console.log('Headers:', req.headers);
+    console.log('Raw body (req.body):', req.body);
+
+    // 2) si req.body est vide, essaye de lire le flux brut (au cas où)
+    let raw = req.body;
+    if (!raw || (typeof raw === 'object' && Object.keys(raw).length === 0)) {
+      // essayer de lire le corps brut
+      raw = await new Promise((resolve) => {
+        let data = '';
+        req.on('data', chunk => data += chunk);
+        req.on('end', () => resolve(data));
+        req.on('error', () => resolve(''));
+      });
+      console.log('Raw text body:', raw);
+      // si c'est du JSON en string, tente de parser
+      try { raw = raw ? JSON.parse(raw) : {}; } catch (e) { /* reste en string */ }
+    }
+
+    // 3) renvoyer ce qu'on a reçu pour vérification
+    return res.status(200).json({
+      ok: true,
+      receivedType: typeof raw,
+      received: raw
     });
-
-    const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: process.env.CONTACT_TO,
-      subject: `[Site CV] ${subject}`,
-      text: `Nom: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
-    };
-
-    await transporter.sendMail(mailOptions);
-    return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('Erreur envoi mail:', err);
-    return res.status(500).json({ error: 'Échec de l\'envoi du mail' });
+    console.error('Debug handler error:', err);
+    return res.status(500).json({ error: 'Erreur serveur debug' });
   }
 };
