@@ -15,9 +15,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
-    // Essaie d'utiliser req.body (si Vercel a parsé le JSON)
     let body = req.body;
-    // Si body vide, lis le flux brut
     if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
       body = await new Promise((resolve) => {
         let data = '';
@@ -25,7 +23,7 @@ module.exports = async (req, res) => {
         req.on('end', () => resolve(data));
         req.on('error', () => resolve(''));
       });
-      try { body = body ? JSON.parse(body) : {}; } catch (e) { /* reste en string */ }
+      try { body = body ? JSON.parse(body) : {}; } catch (e) { /* reste string */ }
     }
 
     return res.status(200).json({
