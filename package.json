@@ -1,5 +1,5 @@
 {
-  "name": "cv-backend",
+  "name": "backend",
   "version": "1.0.0",
   "dependencies": {
     "nodemailer": "^6.9.1"
