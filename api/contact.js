@@ -12,17 +12,23 @@ module.exports = async (req, res) => {
   const { name, email, subject, message } = req.body || {};
   if (!name || !email || !subject || !message) return res.status(400).json({ error: 'Champs manquants (name, email, subject, message)' });
 
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.CONTACT_TO) {
-    console.error('SMTP variables manquantes');
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.OAUTH_CLIENT_ID || !process.env.OAUTH_CLIENT_SECRET || !process.env.OAUTH_REFRESH_TOKEN || !process.env.CONTACT_TO) {
+    console.error('Variables OAuth2 manquantes');
     return res.status(500).json({ error: 'SMTP non configuré' });
   }
 
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
+      port: Number(process.env.SMTP_PORT || 465),
       secure: String(process.env.SMTP_SECURE) === 'true',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      auth: {
+        type: 'OAuth2',
+        user: process.env.SMTP_USER,
+        clientId: process.env.OAUTH_CLIENT_ID,
+        clientSecret: process.env.OAUTH_CLIENT_SECRET,
+        refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+      },
     });
 
     const mail = {
